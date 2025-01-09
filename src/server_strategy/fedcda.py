@@ -278,30 +278,29 @@ class FedCDA(Strategy):
             weight_accumulator = {}
             for name, params in self.server_model.state_dict().items():
                 weight_accumulator[name] = torch.zeros_like(params)
-            #计算client的中心_1 求和
+            
             for i in range(len(self.all_weights)):
-                if(len(self.all_weights[i]))!=0:#如果被选中过
+                if(len(self.all_weights[i]))!=0:
                     print(f"lenght of client models for each client in, All weights length list currently: {[len(i) for i in self.all_weights]}")
                     print(f"Now path: {now_path} | Now path element: {now_path[i]} | Now path index: {now_path[i]}")
                     temp = self.all_weights[i][now_path[i]]
                     for name, params in temp.items():
                         weight_accumulator[name] += params
-            #计算client的中心_2 除数量
+            
             for name, params in weight_accumulator.items():
                 weight_accumulator[name]  = weight_accumulator[name]/self.cal_num
-            #计算client中心到各client的距离
+            
             temp_res = 0
             for i in range(len(self.all_weights)):
-                if(len(self.all_weights[i]))!=0:#如果被选中过
+                if(len(self.all_weights[i]))!=0:
                     print(f"Now path: {now_path[i]}")
                     temp = self.all_weights[i][now_path[i]]
                     for name, params in temp.items():
-                        temp_res += np.linalg.norm((weight_accumulator[name]-params).cpu())#tensor转numpy        
+                        temp_res += np.linalg.norm((weight_accumulator[name]-params).cpu())  
             if(temp_res<res):
                 print("Appear")
                 for i in range(len(now_path)):
                     self.all_choose_k[i] = now_path[i] 
-                #all_choose_k = copy.copy(now_path) #注意这里不能这样写
                 res = temp_res
             return 
         print(f"Start index at: {start_index} | Random Index k: {random_index_k} | len of random index k: {len(random_index_k)}")
@@ -337,7 +336,6 @@ class FedCDA(Strategy):
 
         if not results:
             return None, {}
-            # Do not aggregate if there are failures and failures are not accepted
         if not self.accept_failures and failures:
             return None, {}
         
@@ -357,7 +355,6 @@ class FedCDA(Strategy):
         print(f"Total Number of clients: {all_client_num}")
         self.all_weights = [[] for i in range(all_client_num)]
         self.all_choose_k = [0 for i in range(all_client_num)]
-        # self.all_choose_k = [client["client_id"] for client in local_clients]
 
         self.cal_num = all_client_num #number of clients participating in the current round
         print(f"Total Number of clients: {all_client_num}")
@@ -365,16 +362,11 @@ class FedCDA(Strategy):
         print(f"IDs of clients: {random_index}")
         random_index_k = random.sample(random_index, self.k)  # generate a random sample from the participating client of size k
         print(f"Random Sample: {random_index_k}")
-        # candidates = list() #randomly select k clients
-        # for index in random_index_k:
-        #     for client in local_clients:
-        #         if index==client["client_id"]:
-        #             candidates.append(client["parameters"]) #replace parameters with models
 
-        round_all_weights = [{} for i in range(all_client_num)] #本轮缓存表，缓存的是相对参数
+        round_all_weights = [{} for i in range(all_client_num)] 
         self.weight_accumulator = {}
         for name, params in self.server_model.state_dict().items():
-            self.weight_accumulator[name] = torch.zeros_like(params)  # 初始化上面的参数字典，大小和全局模型相同
+            self.weight_accumulator[name] = torch.zeros_like(params)  
 
         client_models = os.listdir(server_config_file.FEDCDA_SAVE_PATH)
         client_ids = [int(client_model.split('.pth')[0].split('_')[2]) for client_model in client_models]
@@ -383,40 +375,35 @@ class FedCDA(Strategy):
             print(f"Client ID: {c_index} | Random Index k: {random_index_k}")
             if c_index in random_index_k:
                 client_params = [client["parameters"] for client in local_clients if int(client["client_id"])==c_index][0]
-                self.set_client_model(client_params) #update the server_model_copy class attribute
-                
-                #create client model dict by using the server model copy - which is the same as the server model - created just to get the same state dict as the server model
-                #without messing up the actual params of the server
+                self.set_client_model(client_params) 
                 client_res = {} 
-                for name, data in self.server_model_copy.state_dict().items():  # 给原值
+                for name, data in self.server_model_copy.state_dict().items(): 
                     client_res[name] = data
 
-                weight_temp = {} #该本地模型变化量
+                weight_temp = {} 
                 for name, params in self.server_model.state_dict().items():
                     weight_temp[name] = client_res[name] - params
                 
                 client_temp = copy.deepcopy(client_res)
                 try:
                     if(len(self.all_weights[idx])>=self.memory_k):
-                        del self.all_weights[idx][0] #LRU删除
-                        self.all_weights[idx].append({}) #添加当前
+                        del self.all_weights[idx][0] 
+                        self.all_weights[idx].append({}) 
                         for name, data in self.server_model.state_dict().items():
-                            #最后一个应该是memory_k-1
                             self.all_weights[idx][self.memory_k-1][name] = client_temp[name] 
                     else:
-                        self.all_weights[idx].append({}) #添加当前
+                        self.all_weights[idx].append({}) 
                         for name, data in self.server_model.state_dict().items():
                             temp_idx = len(self.all_weights[idx])
                             if temp_idx>=1:
                                 temp_idx = temp_idx - 1
-                            self.all_weights[idx][temp_idx][name] = client_temp[name]  # 记录全局缓存表
-                    round_all_weights[idx] = weight_temp #记录本地缓存表模型变换量，这时候只是给一个初值
+                            self.all_weights[idx][temp_idx][name] = client_temp[name]  
+                    round_all_weights[idx] = weight_temp 
                 except:
                     continue
             else:
                 try:
                     if(len(self.all_weights[idx])!=0):
-                        #记录未选中的部分
                         for name, data in self.server_model.state_dict().items():
                             self.weight_accumulator[name].add_(self.all_weights[idx][self.all_choose_k[idx]][name] - data)
                     else:
@@ -448,30 +435,21 @@ class FedCDA(Strategy):
             metrics_aggregated = {}
             return parameters_aggregated, metrics_aggregated
         else:
-            #更新:分段搜索
-            #搜索函数，寻找这个时候的被选中的client应该选中的model,即最后返回的结果在all_choose_k中体现
             random_split = self.batch_list(len(random_index_k), self.batch_client_num)
             print(f"Random Split from batch_list method: {random_split}")
 
             for i in range(len(random_split)):
-                # 获取第i块batch
                 b, e = random_split[i]
                 batch_i = self.get_block_i(random_index_k, (b, e ))
-                # print(f"batch_i from get_block_i method: {batch_i}")
                 now_path = copy.deepcopy(self.all_choose_k)
                 result = 99999999999999999
-                #search(all_weights,all_choose_k,random_index_k,0,now_path,result,server,cal_num)
-                self.search(batch_i, 0, now_path, result) #stochastic greedy search for best parameters which minimize loss based on divergence from all other clients
+                self.search(batch_i, 0, now_path, result) 
             
-            #random 搜索
             for idx, random_c_index in enumerate(random_index_k):
                 for name, data in self.server_model.state_dict().items():
                     print(f"Post search - all_choose_k[idx]: {self.all_choose_k[idx]}")
-                    if len(self.all_weights[idx])!=0:  #as long as their are weights aggregate them
-                        round_all_weights[idx][name] = self.all_weights[idx][self.all_choose_k[idx]][name] - self.server_model.state_dict()[name] # 记录本地缓存表模型变换量
-                #记录选中的部分
-                # print(f"Weight accumulater keys: {self.weight_accumulator.keys()}")
-                # print(f"Server models keys: {round_all_weights[idx].keys()}")
+                    if len(self.all_weights[idx])!=0: 
+                        round_all_weights[idx][name] = self.all_weights[idx][self.all_choose_k[idx]][name] - self.server_model.state_dict()[name] 
                 try:
                     for name, params in self.server_model.state_dict().items():
                         self.weight_accumulator[name].add_(round_all_weights[idx][name])
