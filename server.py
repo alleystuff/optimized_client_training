@@ -4,16 +4,9 @@ import numpy as np
 import pandas as pd
 from torch import nn
 import flwr as fl
-# from flwr.common import (
-#     FitRes,
-#     Parameters,
-#     Scalar
-# )
 from flwr.common import Context
 from flwr.client import ClientApp
 from flwr.simulation import run_simulation
-# from flwr.server.client_proxy import ClientProxy
-# from flwr.common.parameter import ndarrays_to_parameters
 from flwr.server import ServerApp, ServerConfig, ServerAppComponents
 
 from collections import OrderedDict
@@ -123,21 +116,13 @@ def run_server(
         Create a Flower client representing a single client.
         cid: client id - default argument expected by Flower and used by Flower during federated learning to pass index of the client to be selected
         """
-        # print("NODE ID: ",context.node_id)
-        # cid = context.node_id
-        import warnings
-        warnings.filterwarnings("ignore", category=DeprecationWarning)
-
-        import os
-        # os.chdir("/Users/makhan/Desktop/projects/research_projects/FedCFRL")
-        os.chdir("/home/azm0269@auburn.edu/FedCFRL")
+        os.chdir("<replace with your root>") #replace this location with the full path to the root folder of the project
         print(os.getcwd())
 
 
         partition_id = context.node_config["partition-id"]
         cid = partition_id
         num_partitions = context.node_config["num-partitions"]
-        # load local train dataloader partitions and the neutral dataset
         train_dataloader, val_dataloader, neutral_dataloader, fds_partitioners = load_datasets(
             partition_id=partition_id,
             num_partitions=num_partitions,
@@ -149,12 +134,6 @@ def run_server(
             seed=seed
         )
 
-        # total_train_dataloaders = len(local_train_dataloaders)
-        # total_val_dataloaders = len(local_val_dataloaders)
-
-        # local_train_dataloaders, public_partition_dataloader = local_train_dataloaders[:total_train_dataloaders-1], local_train_dataloaders[total_train_dataloaders-1:]
-        # local_val_dataloaders = local_val_dataloaders[:total_val_dataloaders-1] # there is one val dataloader left when slicing this way - it can be combined with the public partition
-
         print(f"Total Number of local train and validation partitions created: {num_partitions}")
 
         local_train_batch = next(iter(train_dataloader))
@@ -163,10 +142,7 @@ def run_server(
         print(f"Local Test Batch Input Data Shape: {local_val_batch[feature_name].shape}")
 
         print(f"Client ID: {cid}")
-        # train_dataloader = local_train_dataloaders[int(cid)]
-        # val_dataloader = local_val_dataloaders[int(cid)]
         print(f"Client ID {cid} | Train Data Size| {len(train_dataloader)}")
-        ### implment a conditional clause here such that if cid==0 then you instantiate an instance of the IntelligentClient
         if int(cid)==0:
             return OTPClient(
                 client_id = cid,
