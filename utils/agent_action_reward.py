@@ -9,7 +9,7 @@ def get_reward(
     loss_after_aggregation, 
     epsilon=0.01, 
     terminal_state="no"
-): #w_c_before, w_c_after, 
+): 
     """
     action: action taken in updating the tricky local
     Loss after local training should be lower on the local dataset compared to the loss after aggregation on the local dataset.
@@ -17,8 +17,6 @@ def get_reward(
     terminal_state: flag for whether if the current state is the terminal state
     """
     return ((loss_after_aggregation-estimated_local_loss)/estimated_local_loss)*(1/(torch.mean(action) - epsilon))
-    # return ((loss_after_aggregation-estimated_local_loss)/estimated_local_loss)*(1/torch.sigmoid((torch.mean(action - epsilon))))
-    # return ((estimated_local_loss-loss_after_aggregation)/loss_after_aggregation)*(1/torch.sigmoid((torch.mean(action - epsilon))))
 
 
 def get_class_counts_from_dataloader(
